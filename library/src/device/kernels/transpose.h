@@ -139,21 +139,23 @@ __device__ void transpose_tile_device(const T_I*   input,
     }
     else
     {
+        size_t mm = (n * m) / (m / DIM_Y * DIM_X);
+
         for(size_t i = 0; i < m; i += DIM_Y)
         {
-            if(tx1 < n && (ty1 + i) < m)
+            if(tx1 < DIM_X && ty1 < mm && (ty1 + i) < m)
             {
                 T tmp;
                 if(UNIT_STRIDE_0)
                 {
-                    tmp = Handler<T_I>::read(input, in_offset + tx1 + (ty1 + i) * ld_in);
+                    tmp = Handler<T_I>::read(input, in_offset + tx1 + (2 * ty1 + i) * ld_in);
                 }
                 else
                 {
                     tmp = Handler<T_I>::read(input,
                                              in_offset + tx1 * stride_0_in + (ty1 + i) * ld_in);
                 }
-                TRANSPOSE_TWIDDLE_MUL();
+                shared[tx1 % n][2 * ty1 + (tx1 / n) + i] = tmp; // the transpose taking place here
             }
         }
 
