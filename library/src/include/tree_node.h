@@ -119,6 +119,7 @@ private:
         , transTileDir(TTD_IP_HOR)
         , inArrayType(rocfft_array_type_unset)
         , outArrayType(rocfft_array_type_unset)
+        , rocfft_stream(0)
     {
         if(p != nullptr)
         {
@@ -192,6 +193,10 @@ public:
     gpubuf           twiddles;
     gpubuf           twiddles_large;
     gpubuf_t<size_t> devKernArg;
+
+    // hip stream
+    hipStream_t rocfft_stream;
+
 
 public:
     // Disallow copy constructor:

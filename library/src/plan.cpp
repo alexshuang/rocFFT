@@ -1546,6 +1546,9 @@ void TreeNode::build_1DBluestein()
     scheme     = CS_BLUESTEIN;
     lengthBlue = FindBlue(length[0]);
 
+    hipStream_t conv_stream;
+    hipStreamCreateWithFlags(&conv_stream, hipStreamNonBlocking);
+
     auto chirpPlan = TreeNode::CreateNode(this);
 
     chirpPlan->scheme    = CS_KERNEL_CHIRP;
@@ -1589,6 +1592,7 @@ void TreeNode::build_1DBluestein()
     fftcPlan->iOffset = lengthBlue;
     fftcPlan->oOffset = lengthBlue;
     fftcPlan->RecursiveBuildTree();
+    fftcPlan->rocfft_stream = conv_stream;
     childNodes.emplace_back(std::move(fftcPlan));
 
     auto fftmulPlan = TreeNode::CreateNode(this);
