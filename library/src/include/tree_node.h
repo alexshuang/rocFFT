@@ -120,12 +120,15 @@ private:
         , inArrayType(rocfft_array_type_unset)
         , outArrayType(rocfft_array_type_unset)
         , rocfft_stream(0)
+        , sync(false)
     {
         if(p != nullptr)
         {
             precision = p->precision;
             batch     = p->batch;
             direction = p->direction;
+            rocfft_stream = p->rocfft_stream;
+            sync = p->sync;
         }
     }
 
@@ -196,7 +199,7 @@ public:
 
     // hip stream
     hipStream_t rocfft_stream;
-
+    bool sync;
 
 public:
     // Disallow copy constructor:

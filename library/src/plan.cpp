@@ -1522,6 +1522,8 @@ void TreeNode::build_1D()
 
     size_t divLength0 = length[0] / divLength1;
 
+    //std::cout << "length0: " << length[0] << ", divLength0: " << divLength0 << ", divLength1: " << divLength1 << std::endl;
+
     switch(scheme)
     {
     case CS_L1D_TRTRT:
@@ -1558,6 +1560,7 @@ void TreeNode::build_1DBluestein()
     chirpPlan->direction  = direction;
     chirpPlan->batch      = 1;
     chirpPlan->large1D    = 2 * length[0];
+    chirpPlan->sync = true;
     childNodes.emplace_back(std::move(chirpPlan));
 
     auto padmulPlan = TreeNode::CreateNode(this);
@@ -1591,8 +1594,8 @@ void TreeNode::build_1DBluestein()
     fftcPlan->batch   = 1;
     fftcPlan->iOffset = lengthBlue;
     fftcPlan->oOffset = lengthBlue;
-    fftcPlan->RecursiveBuildTree();
     fftcPlan->rocfft_stream = conv_stream;
+    fftcPlan->RecursiveBuildTree();
     childNodes.emplace_back(std::move(fftcPlan));
 
     auto fftmulPlan = TreeNode::CreateNode(this);

@@ -153,6 +153,7 @@ bool PlanPowX(ExecPlan& execPlan)
                 gp.b_x *= execPlan.execSeq[i]->length[2];
             }
             gp.tpb_x = wgs;
+            //std::cout << "CS_KERNEL_STOCKHAM_BLOCK_CC: tpb_x = wgs: " << gp.tpb_x << ", b_x: " << gp.b_x << std::endl;
             break;
         case CS_KERNEL_STOCKHAM_BLOCK_RC:
             ptr = (execPlan.execSeq[0]->precision == rocfft_precision_single)
@@ -167,6 +168,7 @@ bool PlanPowX(ExecPlan& execPlan)
                 gp.b_x *= execPlan.execSeq[i]->length[2];
             }
             gp.tpb_x = wgs;
+            //std::cout << "CS_KERNEL_STOCKHAM_BLOCK_RC: tpb_x = wgs: " << gp.tpb_x << ", b_x: " << gp.b_x << std::endl;
             break;
         case CS_KERNEL_TRANSPOSE:
         case CS_KERNEL_TRANSPOSE_XY_Z:
@@ -347,18 +349,32 @@ void TransformPowX(const ExecPlan&       execPlan,
     // since we will be able to wait for the transform to finish
     bool       emit_profile_log = LOG_PROFILE_ENABLED() && !info->rocfft_stream;
     float      max_memory_bw    = 0.0;
-    hipEvent_t start, stop;
+    hipEvent_t start, stop, sync;
     if(emit_profile_log)
     {
         hipEventCreate(&start);
         hipEventCreate(&stop);
         max_memory_bw = max_memory_bandwidth_GB_per_s();
     }
+
+    bool has_sync_node = false;
+    for(size_t i = 0; i < execPlan.execSeq.size(); i++)
+    {
+        if(execPlan.execSeq[i]->sync)
+        {
+            has_sync_node = true;
+            hipEventCreate(&sync);
+            break;
+        }
+    }
+
     for(size_t i = 0; i < execPlan.execSeq.size(); i++)
     {
         DeviceCallIn data;
         data.node          = execPlan.execSeq[i];
         data.rocfft_stream = data.node->rocfft_stream ? data.node->rocfft_stream : (info == nullptr) ? 0 : info->rocfft_stream;
+        //data.rocfft_stream = (info == nullptr) ? 0 : info->rocfft_stream;
+        //data.node->sync = 0;
 
         // Size of complex type
         const size_t complexTSize = (data.node->precision == rocfft_precision_single)
@@ -666,6 +682,12 @@ void TransformPowX(const ExecPlan&       execPlan,
             if(emit_profile_log)
                 hipEventRecord(stop);
 
+            if(data.node->sync)
+            {
+                hipEventRecord(sync);
+                hipStreamWaitEvent(data.rocfft_stream, sync, 0);
+            }
+
             // If we were on the null stream, measure elapsed time
             // and emit profile logging.  If a stream was given, we
             // can't wait for the transform to finish, so we can't
@@ -780,4 +802,6 @@ void TransformPowX(const ExecPlan&       execPlan,
         hipEventDestroy(start);
         hipEventDestroy(stop);
     }
+    if(has_sync_node)
+        hipEventDestroy(sync);
 }
